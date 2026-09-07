@@ -93,12 +93,26 @@
   .route span { display: block; color: var(--muted); font-size: 13.5px; margin-top: 3px; line-height: 1.35; }
   .route em { font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 26px; color: var(--berry); }
   .maya {
-    display: block; margin-top: 22px; padding: 12px 16px 13px; text-align: center;
-    border: 1.5px dashed var(--berry); border-radius: 999px;
-    color: var(--ink); text-decoration: none; background: transparent;
+    display: block; margin-top: 22px; padding: 16px 18px 15px; text-align: center;
+    border: 1.5px dashed var(--berry); border-radius: 18px;
+    color: var(--ink); background: transparent;
   }
-  .maya:hover, .maya:focus-visible { background: rgba(168,52,92,.06); outline: none; }
-  .maya:focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; }
+  .maya-lab { display:block; font-size: 13px; color: var(--muted); margin-top: 13px; }
+  .maya-inp {
+    margin-top: 6px; padding: 8px 12px; font: inherit; font-size: 15px;
+    color: var(--ink); background: #fff; border: 1px solid var(--berry);
+    border-radius: 10px; text-align: center; max-width: 200px;
+  }
+  .maya-res { margin-top: 12px; }
+  .maya-res b {
+    display: block; font-family: "Cormorant Garamond", serif;
+    font-size: 24px; font-weight: 600; color: var(--berry); line-height: 1.2;
+  }
+  .maya-res i { display:block; font-size: 14px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .maya-more {
+    display: inline-block; margin-top: 12px; font-size: 13px;
+    color: var(--berry); text-underline-offset: 3px;
+  }
   .maya-k { display:block; font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 14px; color: var(--muted); }
   .maya-t { display:block; font-size: 14px; font-weight: 500; margin-top: 1px; line-height: 1.35; }
   .maya-t u { color: var(--berry); text-underline-offset: 3px; font-weight: 400; }
@@ -115,9 +129,14 @@
     <h1>Мила</h1>
     <p class="lede">Романтика маршрутов — пробовать незнакомое, чтобы услышать себя.</p>
 
-    <a class="maya" href="https://t.me/romantika_marshrutov_bot?profile">
-      <span class="maya-t">Какой сегодня день по календарю майя? <u>узнать предназначение</u></span>
-    </a>
+    <div class="maya">
+      <span class="maya-k">календарь майя</span>
+      <span class="maya-t" id="мая-сегодня"></span>
+      <label class="maya-lab" for="мая-дата">а какой день твой?</label>
+      <input class="maya-inp" id="мая-дата" type="date" min="1900-01-01">
+      <div class="maya-res" id="мая-ответ" hidden></div>
+      <a class="maya-more" href="https://t.me/romantika_marshrutov_bot?profile">подробное предназначение →</a>
+    </div>
 
     <hr>
     <p class="to">кому: тебе — выбери маршрут</p>
@@ -134,5 +153,64 @@
 
     <div class="foot"><i>Москва</i><span>сезон «Мексика» до 18.11.2026</span></div>
   </main>
+<script>
+/* Календарь цолькин прямо на странице: раньше за этим уходили в телеграм,
+   в мини-приложение — три шага вместо одного. Корреляция GMT-584283,
+   та же, что в боте и в календаре. */
+(function(){
+  var ЗНАКИ = [
+   ["Имиш","водяная лилия","первооснова, начало, то, из чего всё растёт"],
+   ["Ик","ветер","дыхание и слово: день сказать вслух то, что думал молча"],
+   ["Акбаль","ночь","дом и темнота: день оставаться у себя и восстанавливаться"],
+   ["Кан","зерно","зрелость: то, что посеяли раньше, готово"],
+   ["Чикчан","змея","жизненная сила, телесность, чутьё"],
+   ["Кими","переход","день отпускать и заканчивать, а не начинать"],
+   ["Маник","олень","рука и хватка: день делать, а не рассуждать"],
+   ["Ламат","звезда","изобилие и щедрость, день делиться"],
+   ["Мулук","вода","день благодарности и того, что отдаёшь"],
+   ["Ок","собака","верность и проводник: день про тех, кто рядом"],
+   ["Чуэн","обезьяна","мастер и игра: день делать руками и не всерьёз"],
+   ["Эб","дорога","путь и лестница: день идти своим маршрутом"],
+   ["Бен","тростник","рост и дом: день про семью и то, что держит"],
+   ["Иш","ягуар","земля и тайна: день слушать, а не говорить"],
+   ["Мен","орёл","видение: день смотреть с высоты и дальше, чем обычно"],
+   ["Киб","свеча","предки и память: день спросить у тех, кто был до"],
+   ["Кабан","земля","движение и мысль: день, когда что-то сдвигается"],
+   ["Эцнаб","кремень","нож и зеркало: день правды, даже неудобной"],
+   ["Кавак","гроза","буря и обновление: день, после которого чисто"],
+   ["Ахау","владыка","солнце и завершение: день закрывать круг"]
+  ];
+  function юд(д){
+    var м = д.getMonth()+1, a = Math.floor((14-м)/12),
+        y = д.getFullYear()+4800-a, m = м+12*a-3;
+    return д.getDate()+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)
+           -Math.floor(y/100)+Math.floor(y/400)-32045;
+  }
+  function цолькин(д){
+    var x = юд(д)-584283;
+    return {ч:(((x+3)%13)+13)%13+1, з:ЗНАКИ[((x+19)%20+20)%20]};
+  }
+  var сег = document.getElementById("мая-сегодня"),
+      поле = document.getElementById("мая-дата"),
+      отв  = document.getElementById("мая-ответ");
+  if(!сег || !поле || !отв) return;
+
+  var сегодня = new Date(); сегодня.setHours(0,0,0,0);
+  var ц = цолькин(сегодня);
+  сег.textContent = "сегодня — " + ц.ч + " " + ц.з[0] + " · " + ц.з[1];
+  поле.max = сегодня.toISOString().slice(0,10);
+
+  поле.addEventListener("change", function(){
+    var ч = поле.value.split("-").map(Number);
+    if(ч.length !== 3 || !ч[0]){ отв.hidden = true; return; }
+    var д = new Date(ч[0], ч[1]-1, ч[2]);
+    if(isNaN(д)){ отв.hidden = true; return; }
+    var р = цолькин(д);
+    отв.innerHTML = "<b>" + р.ч + " " + р.з[0] + "</b><i>" + р.з[1]
+                  + " — " + р.з[2] + "</i>";
+    отв.hidden = false;
+  });
+})();
+</script>
 </body>
 </html>
